@@ -1,48 +1,73 @@
-name: job-template
-description: Template for SGNL JavaScript jobs - replace with your job description
+name: aws-add-to-identity-center-group
+description: Add a user to an AWS Identity Center (SSO) group
 
 # Input parameters for web form generation
 inputs:
-  target:
+  userName:
     type: text
-    description: Target resource identifier (e.g., user email, group ID)
+    description: The username of the user to add to the group
     required: true
     validation:
       min: 1
-      max: 100
+      max: 128
 
-  action:
+  identityStoreId:
     type: text
-    description: Action to perform on the target resource
+    description: The Identity Store ID (e.g., d-1234567890)
     required: true
     validation:
       min: 1
-      max: 50
+      max: 64
 
-  options:
-    type: array
-    description: Additional options for the operation
-    required: false
-    item_type: text
+  groupId:
+    type: text
+    description: The ID of the group to add the user to
+    required: true
     validation:
-      max: 10
+      min: 1
+      max: 47
 
-  dry_run:
-    type: boolean
-    description: Preview changes without executing them
-    required: false
-    default: false
+  region:
+    type: text
+    description: AWS region (e.g., us-east-1)
+    required: true
+    validation:
+      min: 1
+      max: 30
 
 # Expected output structure
 outputs:
-  status:
+  userName:
     type: text
-    description: Operation result (success, failed, recovered, etc.)
+    description: The username that was added
 
-  target:
+  groupId:
     type: text
-    description: The target resource that was processed
+    description: The group ID the user was added to
 
-  processed_at:
+  userId:
+    type: text
+    description: The resolved user ID from the username
+
+  membershipId:
+    type: text
+    description: The ID of the created group membership
+
+  added:
+    type: boolean
+    description: Whether the user was successfully added
+
+  addedAt:
     type: datetime
-    description: When the operation completed (ISO 8601)
+    description: When the addition completed (ISO 8601)
+
+# Required secrets (configured at deployment time)
+secrets:
+  - AWS_ACCESS_KEY_ID
+  - AWS_SECRET_ACCESS_KEY
+
+# Runtime configuration
+runtime:
+  type: nodejs-22
+  timeout: 30s
+  memory: 128Mi

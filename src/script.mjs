@@ -1,100 +1,169 @@
-/**
- * SGNL Job Template
- *
- * This template provides a starting point for implementing SGNL jobs.
- * Replace this implementation with your specific business logic.
- */
+import { IdentitystoreClient, GetUserIdCommand, CreateGroupMembershipCommand } from '@aws-sdk/client-identitystore';
+
+class RetryableError extends Error {
+  constructor(message) {
+    super(message);
+    this.retryable = true;
+  }
+}
+
+class FatalError extends Error {
+  constructor(message) {
+    super(message);
+    this.retryable = false;
+  }
+}
+
+async function getUserIdFromUsername(client, identityStoreId, userName) {
+  const command = new GetUserIdCommand({
+    IdentityStoreId: identityStoreId,
+    AlternateIdentifier: {
+      UniqueAttribute: {
+        AttributePath: 'userName',
+        AttributeValue: userName
+      }
+    }
+  });
+
+  try {
+    const response = await client.send(command);
+    return response.UserId;
+  } catch (error) {
+    if (error.name === 'ResourceNotFoundException') {
+      throw new FatalError(`User not found: ${userName}`);
+    }
+    if (error.name === 'ThrottlingException' || error.name === 'ServiceUnavailableException') {
+      throw new RetryableError(`AWS service temporarily unavailable: ${error.message}`);
+    }
+    throw new FatalError(`Failed to get user ID for ${userName}: ${error.message}`);
+  }
+}
+
+async function addUserToGroup(client, identityStoreId, groupId, userId) {
+  const command = new CreateGroupMembershipCommand({
+    IdentityStoreId: identityStoreId,
+    GroupId: groupId,
+    MemberId: {
+      UserId: userId
+    }
+  });
+
+  try {
+    const response = await client.send(command);
+    return response.MembershipId;
+  } catch (error) {
+    if (error.name === 'ConflictException') {
+      // User is already in the group
+      console.log(`User is already a member of the group`);
+      return 'existing';
+    }
+    if (error.name === 'ResourceNotFoundException') {
+      throw new FatalError(`Group not found: ${groupId}`);
+    }
+    if (error.name === 'ThrottlingException' || error.name === 'ServiceUnavailableException') {
+      throw new RetryableError(`AWS service temporarily unavailable: ${error.message}`);
+    }
+    throw new FatalError(`Failed to add user to group: ${error.message}`);
+  }
+}
+
+function validateInputs(params) {
+  if (!params.userName || typeof params.userName !== 'string' || params.userName.trim() === '') {
+    throw new FatalError('Invalid or missing userName parameter');
+  }
+  
+  if (!params.identityStoreId || typeof params.identityStoreId !== 'string' || params.identityStoreId.trim() === '') {
+    throw new FatalError('Invalid or missing identityStoreId parameter');
+  }
+
+  if (!params.groupId || typeof params.groupId !== 'string' || params.groupId.trim() === '') {
+    throw new FatalError('Invalid or missing groupId parameter');
+  }
+  
+  if (!params.region || typeof params.region !== 'string' || params.region.trim() === '') {
+    throw new FatalError('Invalid or missing region parameter');
+  }
+}
 
 export default {
-  /**
-   * Main execution handler - implement your job logic here
-   * @param {Object} params - Job input parameters
-   * @param {Object} context - Execution context with env, secrets, outputs
-   * @returns {Object} Job results
-   */
   invoke: async (params, context) => {
-    console.log('Starting job execution');
-    console.log(`Processing target: ${params.target}`);
-    console.log(`Action: ${params.action}`);
-
-    // TODO: Replace with your implementation
-    const { target, action, options = [], dry_run = false } = params;
-
-    if (dry_run) {
-      console.log('DRY RUN: No changes will be made');
+    console.log('Starting AWS Add to Identity Center Group action');
+    
+    try {
+      validateInputs(params);
+      
+      const { userName, identityStoreId, groupId, region } = params;
+      
+      console.log(`Processing user: ${userName} for group: ${groupId}`);
+      
+      if (!context.secrets?.AWS_ACCESS_KEY_ID || !context.secrets?.AWS_SECRET_ACCESS_KEY) {
+        throw new FatalError('Missing required AWS credentials in secrets');
+      }
+      
+      // Create AWS Identity Store client
+      const client = new IdentitystoreClient({
+        region: region,
+        credentials: {
+          accessKeyId: context.secrets.AWS_ACCESS_KEY_ID,
+          secretAccessKey: context.secrets.AWS_SECRET_ACCESS_KEY
+        }
+      });
+      
+      // Get user ID from username
+      console.log(`Resolving user ID for username: ${userName}`);
+      const userId = await getUserIdFromUsername(client, identityStoreId, userName);
+      console.log(`Resolved user ID: ${userId}`);
+      
+      // Add user to group
+      console.log(`Adding user ${userId} to group ${groupId}`);
+      const membershipId = await addUserToGroup(client, identityStoreId, groupId, userId);
+      
+      const result = {
+        userName,
+        groupId,
+        userId,
+        membershipId: membershipId === 'existing' ? 'already-member' : membershipId,
+        added: membershipId !== 'existing',
+        addedAt: new Date().toISOString()
+      };
+      
+      if (membershipId === 'existing') {
+        console.log(`User ${userName} was already a member of group ${groupId}`);
+      } else {
+        console.log(`Successfully added user ${userName} to group ${groupId}`);
+      }
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`Error adding user to group: ${error.message}`);
+      
+      if (error instanceof RetryableError || error instanceof FatalError) {
+        throw error;
+      }
+      
+      throw new FatalError(`Unexpected error: ${error.message}`);
     }
-
-    // Access environment variables
-    const environment = context.env.ENVIRONMENT || 'development';
-    console.log(`Running in ${environment} environment`);
-
-    // Access secrets securely (example)
-    if (context.secrets.API_KEY) {
-      console.log(`Using API key ending in ...${context.secrets.API_KEY.slice(-4)}`);
-    }
-
-    // Use outputs from previous jobs in workflow
-    if (context.outputs && Object.keys(context.outputs).length > 0) {
-      console.log(`Available outputs from ${Object.keys(context.outputs).length} previous jobs`);
-      console.log(`Previous job outputs: ${Object.keys(context.outputs).join(', ')}`);
-    }
-
-    // TODO: Implement your business logic here
-    console.log(`Performing ${action} on ${target}...`);
-
-    if (options.length > 0) {
-      console.log(`Processing ${options.length} options: ${options.join(', ')}`);
-    }
-
-    console.log(`Successfully completed ${action} on ${target}`);
-
-    // Return structured results
-    return {
-      status: dry_run ? 'dry_run_completed' : 'success',
-      target: target,
-      action: action,
-      options_processed: options.length,
-      environment: environment,
-      processed_at: new Date().toISOString()
-      // Job completed successfully
-    };
   },
 
-  /**
-   * Error recovery handler - implement error handling logic
-   * @param {Object} params - Original params plus error information
-   * @param {Object} context - Execution context
-   * @returns {Object} Recovery results
-   */
   error: async (params, _context) => {
-    const { error, target } = params;
-    console.error(`Job encountered error while processing ${target}: ${error.message}`);
-
-    // TODO: Implement your error recovery logic
-    // Example: Check if error is retryable and attempt recovery
-
-    // For now, just throw the error - implement your logic here
-    throw new Error(`Unable to recover from error: ${error.message}`);
+    const { error } = params;
+    console.error(`Error handler invoked: ${error?.message}`);
+    
+    // Re-throw to let framework handle retries
+    throw error;
   },
 
-  /**
-   * Graceful shutdown handler - implement cleanup logic
-   * @param {Object} params - Original params plus halt reason
-   * @param {Object} context - Execution context
-   * @returns {Object} Cleanup results
-   */
   halt: async (params, _context) => {
-    const { reason, target } = params;
-    console.log(`Job is being halted (${reason}) while processing ${target}`);
-
-    // TODO: Implement your cleanup logic
-    // Example: Save partial results, close connections, etc.
-
+    const { reason, userName, groupId } = params;
+    console.log(`Job is being halted (${reason})`);
+    
     return {
-      status: 'halted',
-      target: target || 'unknown',
-      reason: reason,
-      halted_at: new Date().toISOString()
+      userName: userName || 'unknown',
+      groupId: groupId || 'unknown',
+      reason: reason || 'unknown',
+      haltedAt: new Date().toISOString(),
+      cleanupCompleted: true
     };
   }
 };
