@@ -6,8 +6,8 @@ describe('AWS Add to Identity Center Group Script', () => {
       ENVIRONMENT: 'test'
     },
     secrets: {
-      AWS_ACCESS_KEY_ID: 'test-access-key',
-      AWS_SECRET_ACCESS_KEY: 'test-secret-key'
+      BASIC_USERNAME: 'test-access-key',
+      BASIC_PASSWORD: 'test-secret-key'
     },
     outputs: {}
   };
@@ -77,7 +77,7 @@ describe('AWS Add to Identity Center Group Script', () => {
       };
 
       await expect(script.invoke(params, contextWithoutCreds))
-        .rejects.toThrow('Missing required AWS credentials in secrets');
+        .rejects.toThrow('Missing required credentials in secrets');
     });
 
     // Note: Testing actual AWS SDK calls would require mocking the SDK
