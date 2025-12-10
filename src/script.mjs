@@ -1,4 +1,5 @@
 import { IdentitystoreClient, GetUserIdCommand, CreateGroupMembershipCommand } from '@aws-sdk/client-identitystore';
+import {resolveJSONPathTemplates} from '@sgnl-actions/utils';
 
 class RetryableError extends Error {
   constructor(message) {
@@ -101,10 +102,18 @@ export default {
   invoke: async (params, context) => {
     console.log('Starting AWS Add to Identity Center Group action');
 
-    try {
-      validateInputs(params);
+    const jobContext = context.data || {};
 
-      const { userName, identityStoreId, groupId, region } = params;
+    // Resolve JSONPath templates in params
+    const { result: resolvedParams, errors } = resolveJSONPathTemplates(params, jobContext);
+    if (errors.length > 0) {
+      throw new Error(`Failed to resolve template values: ${errors.join(', ')}`);
+    }
+
+    try {
+      validateInputs(resolvedParams);
+
+      const { userName, identityStoreId, groupId, region } = resolvedParams;
 
       console.log(`Processing user: ${userName} for group: ${groupId}`);
 
