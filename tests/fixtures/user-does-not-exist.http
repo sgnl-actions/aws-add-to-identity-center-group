@@ -2,7 +2,7 @@ HTTP/1.1 400 Bad Request
 connection: close
 content-length: 139
 content-type: application/x-amz-json-1.1
-date: Mon, 02 Mar 2026 19:53:06 GMT
-x-amzn-requestid: efd39850-c91b-472c-ad36-fdc88e259717
+date: Mon, 02 Mar 2026 20:36:12 GMT
+x-amzn-requestid: d7c09ebb-04ac-4c0c-8248-ee87b4ef136b
 
-{"__type":"ResourceNotFoundException","Message":"USER not found.","RequestId":"efd39850-c91b-472c-ad36-fdc88e259717","ResourceType":"USER"}
+{"__type":"ResourceNotFoundException","Message":"USER not found.","RequestId":"d7c09ebb-04ac-4c0c-8248-ee87b4ef136b","ResourceType":"USER"}
