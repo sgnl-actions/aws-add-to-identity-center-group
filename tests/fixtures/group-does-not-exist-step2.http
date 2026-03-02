@@ -1,0 +1,8 @@
+HTTP/1.1 400 Bad Request
+connection: close
+content-length: 145
+content-type: application/x-amz-json-1.1
+date: Mon, 02 Mar 2026 18:51:55 GMT
+x-amzn-requestid: abba3252-8fa1-4ce1-bb8e-2255710b47d7
+
+{"__type":"ResourceNotFoundException","Message":"Group does not exist","RequestId":"abba3252-8fa1-4ce1-bb8e-2255710b47d7","ResourceType":"GROUP"}

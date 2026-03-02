@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+connection: close
+content-length: 82
+content-type: application/x-amz-json-1.1
+date: Mon, 02 Mar 2026 18:48:04 GMT
+x-amzn-requestid: 169f678c-ac81-4db0-beb2-9d80a298a54b
+
+{"IdentityStoreId":"identity-store-id","UserId":"user-id"}
