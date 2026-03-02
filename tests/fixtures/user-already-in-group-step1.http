@@ -2,7 +2,7 @@ HTTP/1.1 200 OK
 connection: close
 content-length: 82
 content-type: application/x-amz-json-1.1
-date: Mon, 02 Mar 2026 18:48:04 GMT
-x-amzn-requestid: 169f678c-ac81-4db0-beb2-9d80a298a54b
+date: Mon, 02 Mar 2026 19:52:08 GMT
+x-amzn-requestid: 988c805b-9164-453f-b9ac-0f012e44f55c
 
-{"IdentityStoreId":"identity-store-id","UserId":"user-id"}
+{"IdentityStoreId":"d-8b77564492","UserId":"61eb35b0-f0c1-709d-750e-93b3da2e4a2d"}

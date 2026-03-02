@@ -1,0 +1,8 @@
+HTTP/1.1 400 Bad Request
+connection: close
+content-length: 139
+content-type: application/x-amz-json-1.1
+date: Mon, 02 Mar 2026 19:36:01 GMT
+x-amzn-requestid: 43bdaeb5-6660-44a3-a573-adf161ebbad2
+
+{"__type":"ResourceNotFoundException","Message":"USER not found.","RequestId":"43bdaeb5-6660-44a3-a573-adf161ebbad2","ResourceType":"USER"}

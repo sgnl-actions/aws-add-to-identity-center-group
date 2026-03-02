@@ -1,8 +1,0 @@
-HTTP/1.1 400 Bad Request
-connection: close
-content-length: 170
-content-type: application/x-amz-json-1.1
-date: Mon, 02 Mar 2026 18:49:35 GMT
-x-amzn-requestid: 6662cc60-2b97-4c5f-86b1-8097de008094
-
-{"__type":"ResourceNotFoundException","Message":"IdentityStore not present for IdentityStoreId: d-9a67574495","ResourceId":"d-9a67574495","ResourceType":"IDENTITY_STORE"}

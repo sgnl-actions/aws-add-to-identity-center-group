@@ -6,8 +6,8 @@
 action:
   params:
     userName: test-user-1
-    identityStoreId: identity-store-id
-    groupId: group-id
+    identityStoreId: d-8b77564492
+    groupId: 810b05d1-10g1-70eb-8cee-61aa45188g92
     region: us-east-2
   context:
     secrets:
@@ -28,11 +28,10 @@ scenarios:
     invoke:
       returns:
         userName: test-user-1
-        groupId: group-id
-        userId: user-id
-        membershipId: membership-id
+        groupId: 810b05d1-10g1-70eb-8cee-61aa45188g92
+        userId: 61eb35b0-f0c1-709d-750e-93b3da2e4a2d
+        membershipId: 21fb65a0-50a1-702d-926d-3f5aec045b7b
         added: true
-        addedAt: "2026-03-02T18:46:54.359Z"
   - name: User Already in Group
     steps:
       - request:
@@ -46,12 +45,13 @@ scenarios:
     invoke:
       returns:
         userName: test-user-1
-        groupId: group-id
-        userId: user-id
+        groupId: 810b05d1-10g1-70eb-8cee-61aa45188g92
+        userId: 61eb35b0-f0c1-709d-750e-93b3da2e4a2d
         membershipId: already-member
         added: false
-        addedAt: "2026-03-02T18:48:04.577Z"
   - name: User Does not Exist
+    params:
+      userName: test-user-5
     request:
       method: POST
       url: https://identitystore.us-east-2.amazonaws.com/
@@ -59,6 +59,8 @@ scenarios:
     invoke:
       throws: "User not found: test-user-5"
   - name: Group Does not Exist
+    params:
+      groupId: 00000000-0000-0000-0000-000000000000
     steps:
       - request:
           method: POST
@@ -69,7 +71,7 @@ scenarios:
           url: https://identitystore.us-east-2.amazonaws.com/
         fixture: fixtures/group-does-not-exist-step2.http
     invoke:
-      throws: "Group not found: invalid-group-id"
+      throws: "Group not found: 00000000-0000-0000-0000-000000000000"
   - name: Invalid Credentials
     context:
       secrets:
