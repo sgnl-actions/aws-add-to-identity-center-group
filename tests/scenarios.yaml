@@ -83,3 +83,103 @@ scenarios:
     fixture: fixtures/invalid-credentials.http
     invoke:
       throws: "Failed to get user ID for test-user-1: The security token included in the request is invalid."
+  - name: Base Success Case (AWS Assume Role with Web Identity)
+    context:
+      secrets:
+        BASIC_USERNAME: ''
+        BASIC_PASSWORD: ''
+        OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET: valid-client-secret
+      environment:
+        OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL: 'https://login.microsoftonline.com/someTenant/oauth2/v2.0/token'
+        OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID: 'someClientId'
+        OAUTH2_CLIENT_CREDENTIALS_SCOPE: 'api://aud/.default'
+        AWS_ASSUME_ROLE_WEB_IDENTITY_REGION: 'us-east-2'
+        AWS_ASSUME_ROLE_WEB_IDENTITY_ROLE_ARN: 'arn:aws:iam::1234567890:role/test-role-azure'
+        AWS_ASSUME_ROLE_WEB_IDENTITY_SESSION_NAME: 'test-session'
+        AWS_ASSUME_ROLE_WEB_IDENTITY_SESSION_DURATION_SECONDS: 900
+    steps:
+      - request:
+          method: POST
+          url: 'https://login.microsoftonline.com/someTenant/oauth2/v2.0/token'
+        fixture: fixtures/web-identity-token-endpoint.http
+      - request:
+          method: POST
+          url: https://sts.us-east-2.amazonaws.com/
+        fixture: fixtures/web-identity-assume-role.http
+      - request:
+          method: POST
+          url: https://identitystore.us-east-2.amazonaws.com/
+        fixture: fixtures/base-success-case-step1.http
+      - request:
+          method: POST
+          url: https://identitystore.us-east-2.amazonaws.com/
+        fixture: fixtures/base-success-case-step2.http
+    invoke:
+      returns:
+        userName: test-user-1
+        groupId: 810b05d1-10g1-70eb-8cee-61aa45188g92
+        userId: 61eb35b0-f0c1-709d-750e-93b3da2e4a2d
+        membershipId: 21fb65a0-50a1-702d-926d-3f5aec045b7b
+        added: true
+  - name: Missing userName Parameter
+    params:
+      userName: ''
+    steps: []
+    invoke:
+      throws: "Invalid or missing userName parameter"
+  - name: Missing identityStoreId Parameter
+    params:
+      identityStoreId: ''
+    steps: []
+    invoke:
+      throws: "Invalid or missing identityStoreId parameter"
+  - name: Missing groupId Parameter
+    params:
+      groupId: ''
+    steps: []
+    invoke:
+      throws: "Invalid or missing groupId parameter"
+  - name: Missing region Parameter
+    params:
+      region: ''
+    steps: []
+    invoke:
+      throws: "Invalid or missing region parameter"
+  - name: Throttling Exception (GetUserId)
+    request:
+      method: POST
+      url: https://identitystore.us-east-2.amazonaws.com/
+    fixture: fixtures/throttling-exception.http
+    invoke:
+      throws: "AWS service temporarily unavailable: Rate exceeded"
+  - name: Service Unavailable Exception (GetUserId)
+    request:
+      method: POST
+      url: https://identitystore.us-east-2.amazonaws.com/
+    fixture: fixtures/service-unavailable-exception.http
+    invoke:
+      throws: "AWS service temporarily unavailable: Service is temporarily unavailable"
+  - name: Throttling Exception (CreateGroupMembership)
+    steps:
+      - request:
+          method: POST
+          url: https://identitystore.us-east-2.amazonaws.com/
+        fixture: fixtures/base-success-case-step1.http
+      - request:
+          method: POST
+          url: https://identitystore.us-east-2.amazonaws.com/
+        fixture: fixtures/throttling-exception.http
+    invoke:
+      throws: "AWS service temporarily unavailable: Rate exceeded"
+  - name: Service Unavailable Exception (CreateGroupMembership)
+    steps:
+      - request:
+          method: POST
+          url: https://identitystore.us-east-2.amazonaws.com/
+        fixture: fixtures/base-success-case-step1.http
+      - request:
+          method: POST
+          url: https://identitystore.us-east-2.amazonaws.com/
+        fixture: fixtures/service-unavailable-exception.http
+    invoke:
+      throws: "AWS service temporarily unavailable: Service is temporarily unavailable"

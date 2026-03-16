@@ -1,4 +1,15 @@
 import script from '../src/script.mjs';
+import { runScenarios } from '@sgnl-actions/testing';
+
+// Disable AWS SDK retries — nock's socket-level behavior can trigger
+// spurious retries that exhaust the single-use interceptors.
+process.env.AWS_MAX_ATTEMPTS = '1';
+
+runScenarios({
+  script: './src/script.mjs',
+  scenarios: './tests/scenarios.yaml',
+  includeCommon: false
+});
 
 describe('AWS Add to Identity Center Group Script', () => {
   const mockContext = {
@@ -16,72 +27,6 @@ describe('AWS Add to Identity Center Group Script', () => {
     // Mock console to avoid noise in tests
     global.console.log = () => {};
     global.console.error = () => {};
-  });
-
-  describe('invoke handler', () => {
-    test('should throw error for missing userName', async () => {
-      const params = {
-        identityStoreId: 'd-1234567890',
-        groupId: 'group-123',
-        region: 'us-east-1'
-      };
-
-      await expect(script.invoke(params, mockContext))
-        .rejects.toThrow('Invalid or missing userName parameter');
-    });
-
-    test('should throw error for missing identityStoreId', async () => {
-      const params = {
-        userName: 'TestUser',
-        groupId: 'group-123',
-        region: 'us-east-1'
-      };
-
-      await expect(script.invoke(params, mockContext))
-        .rejects.toThrow('Invalid or missing identityStoreId parameter');
-    });
-
-    test('should throw error for missing groupId', async () => {
-      const params = {
-        userName: 'TestUser',
-        identityStoreId: 'd-1234567890',
-        region: 'us-east-1'
-      };
-
-      await expect(script.invoke(params, mockContext))
-        .rejects.toThrow('Invalid or missing groupId parameter');
-    });
-
-    test('should throw error for missing region', async () => {
-      const params = {
-        userName: 'TestUser',
-        identityStoreId: 'd-1234567890',
-        groupId: 'group-123'
-      };
-
-      await expect(script.invoke(params, mockContext))
-        .rejects.toThrow('Invalid or missing region parameter');
-    });
-
-    test('should throw error for missing AWS credentials', async () => {
-      const params = {
-        userName: 'TestUser',
-        identityStoreId: 'd-1234567890',
-        groupId: 'group-123',
-        region: 'us-east-1'
-      };
-
-      const contextWithoutCreds = {
-        ...mockContext,
-        secrets: {}
-      };
-
-      await expect(script.invoke(params, contextWithoutCreds))
-        .rejects.toThrow('Missing required credentials in secrets');
-    });
-
-    // Note: Testing actual AWS SDK calls would require mocking the SDK
-    // or integration tests with real AWS credentials
   });
 
   describe('error handler', () => {

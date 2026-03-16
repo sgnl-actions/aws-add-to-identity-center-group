@@ -1,4 +1,6 @@
 import { IdentitystoreClient, GetUserIdCommand, CreateGroupMembershipCommand } from '@aws-sdk/client-identitystore';
+import { getAwsCredentials } from './auth.mjs';
+import { randomUUID } from 'node:crypto';
 
 class RetryableError extends Error {
   constructor(message) {
@@ -85,6 +87,61 @@ function validateInputs(params) {
   }
 }
 
+function hasBasicAuth(context) {
+  return Boolean(context.secrets?.BASIC_USERNAME && context.secrets?.BASIC_PASSWORD);
+}
+
+function hasOAuth2ClientCredentials(context) {
+  return Boolean(
+    context.environment?.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID &&
+      context.environment?.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL &&
+      context.secrets?.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET
+  );
+}
+
+function hasAwsAssumeRoleWebIdentityConfig(context) {
+  return Boolean(
+    context.environment?.AWS_ASSUME_ROLE_WEB_IDENTITY_REGION &&
+    context.environment?.AWS_ASSUME_ROLE_WEB_IDENTITY_ROLE_ARN
+  );
+}
+
+function buildAwsCredentialsParams(context) {
+  if (hasBasicAuth(context)) {
+    return {
+      basic: {
+        username:  context.secrets.BASIC_USERNAME,
+        password: context.secrets.BASIC_PASSWORD
+      }
+    };
+  }
+
+  if (hasOAuth2ClientCredentials(context)) {
+    if (!hasAwsAssumeRoleWebIdentityConfig(context)) {
+      throw new FatalError('OAuth2ClientCredentials missing required AwsAssumeRoleWebIdentity configuration');
+    }
+
+    return {
+      clientCredentials: {
+        clientId: context.environment.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID,
+        clientSecret: context.secrets.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET,
+        tokenUrl: context.environment.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL,
+        scope: context.environment.OAUTH2_CLIENT_CREDENTIALS_SCOPE,
+        audience: context.environment.OAUTH2_CLIENT_CREDENTIALS_AUDIENCE,
+        authStyle: context.environment.OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE,
+        awsConfig: {
+          region: context.environment.AWS_ASSUME_ROLE_WEB_IDENTITY_REGION,
+          roleArn: context.environment.AWS_ASSUME_ROLE_WEB_IDENTITY_ROLE_ARN,
+          sessionName: context.environment.AWS_ASSUME_ROLE_WEB_IDENTITY_SESSION_NAME || `sgnl-action-${randomUUID()}`,
+          sessionDuration: context.environment.AWS_ASSUME_ROLE_WEB_IDENTITY_SESSION_DURATION_SECONDS
+        }
+      }
+    };
+  }
+
+  throw new FatalError('unsupported auth type: expected Basic or OAuth2ClientCredentials with AwsAssumeRoleWebIdentity');
+}
+
 export default {
   /**
    * Main execution handler - adds user to AWS Identity Center group
@@ -94,8 +151,8 @@ export default {
    * @param {string} params.groupId - AWS Identity Center group ID
    * @param {string} params.region - AWS region
    * @param {Object} context - Execution context with env, secrets, outputs
-   * @param {string} context.secrets.BASIC_USERNAME - AWS Access Key ID
-   * @param {string} context.secrets.BASIC_PASSWORD - AWS Secret Access Key
+   * @param {string} context.secrets.BASIC_USERNAME - AWS Access Key ID (if using Basic auth)
+   * @param {string} context.secrets.BASIC_PASSWORD - AWS Secret Access Key (if using Basic auth)
    * @returns {Object} Addition results
    */
   invoke: async (params, context) => {
@@ -108,17 +165,12 @@ export default {
 
       console.log(`Processing user: ${userName} for group: ${groupId}`);
 
-      if (!context.secrets?.BASIC_USERNAME || !context.secrets?.BASIC_PASSWORD) {
-        throw new FatalError('Missing required credentials in secrets');
-      }
+      const awsCredentialsParams = buildAwsCredentialsParams(context);
 
       // Create AWS Identity Store client
       const client = new IdentitystoreClient({
         region: region,
-        credentials: {
-          accessKeyId: context.secrets.BASIC_USERNAME,
-          secretAccessKey: context.secrets.BASIC_PASSWORD
-        }
+        credentials: await getAwsCredentials(awsCredentialsParams)
       });
 
       // Get user ID from username
@@ -130,7 +182,13 @@ export default {
       console.log(`Adding user ${userId} to group ${groupId}`);
       const membershipId = await addUserToGroup(client, identityStoreId, groupId, userId);
 
-      const result = {
+      if (membershipId === 'existing') {
+        console.log(`User ${userName} was already a member of group ${groupId}`);
+      } else {
+        console.log(`Successfully added user ${userName} to group ${groupId}`);
+      }
+
+      return {
         userName,
         groupId,
         userId,
@@ -138,14 +196,6 @@ export default {
         added: membershipId !== 'existing',
         addedAt: new Date().toISOString()
       };
-
-      if (membershipId === 'existing') {
-        console.log(`User ${userName} was already a member of group ${groupId}`);
-      } else {
-        console.log(`Successfully added user ${userName} to group ${groupId}`);
-      }
-
-      return result;
 
     } catch (error) {
       console.error(`Error adding user to group: ${error.message}`);
