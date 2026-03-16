@@ -1,0 +1,22 @@
+HTTP/1.1 200 OK
+content-type: text/xml
+date: Mon, 02 Mar 2026 21:23:26 GMT
+
+<AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleWithWebIdentityResult>
+    <Credentials>
+      <AccessKeyId>someAccessKeyId</AccessKeyId>
+      <SecretAccessKey>someAccessSecret</SecretAccessKey>
+      <SessionToken>AQoDYXdzEJr//example/session/token</SessionToken>
+      <Expiration>2026-03-02T22:23:26Z</Expiration>
+    </Credentials>
+    <AssumedRoleUser>
+      <Arn>arn:aws:sts::1234567890:assumed-role/test-role-azure/test-session</Arn>
+      <AssumedRoleId>AROAIOSFODNN7EXAMPLE:test-session</AssumedRoleId>
+    </AssumedRoleUser>
+  </AssumeRoleWithWebIdentityResult>
+  <ResponseMetadata>
+    <RequestId>a1b2c3d4-e5f6-7890-abcd-ef1234567890</RequestId>
+  </ResponseMetadata>
+</AssumeRoleWithWebIdentityResponse>
+
