@@ -64,8 +64,66 @@ outputs:
 
 # Required secrets (configured at deployment time)
 secrets:
-  - AWS_ACCESS_KEY_ID
-  - AWS_SECRET_ACCESS_KEY
+  BASIC_USERNAME:
+    type: text
+    description: AWS access key ID (for direct auth)
+    required: false
+  BASIC_PASSWORD:
+    type: text
+    description: AWS secret access key (for direct auth)
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET:
+    type: text
+    description: OAuth2 client secret (for federated auth)
+    required: false
+
+environment:
+  OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID:
+    type: text
+    description: OAuth2 client credentials client ID
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL:
+    type: text
+    description: OAuth2 client credentials token URL
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_SCOPE:
+    type: text
+    description: OAuth2 client credentials scope
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_AUDIENCE:
+    type: text
+    description: OAuth2 client credentials audience
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE:
+    type: text
+    description: OAuth2 client credentials auth style
+    required: false
+  AWS_ASSUME_ROLE_WEB_IDENTITY_REGION:
+    type: text
+    description: AWS region for STS AssumeRoleWithWebIdentity
+    required: false
+  AWS_ASSUME_ROLE_WEB_IDENTITY_ROLE_ARN:
+    type: text
+    description: ARN of the IAM role to assume
+    required: false
+  AWS_ASSUME_ROLE_WEB_IDENTITY_SESSION_NAME:
+    type: text
+    description: Session name for the assumed role
+    required: false
+  AWS_ASSUME_ROLE_WEB_IDENTITY_SESSION_DURATION_SECONDS:
+    type: text
+    description: Duration in seconds for the assumed role session
+    required: false
+
+requires_one_of:
+  - ["secrets.BASIC_USERNAME", "secrets.BASIC_PASSWORD"]
+  - [
+      "secrets.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET",
+      "environment.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID",
+      "environment.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL",
+      "environment.AWS_ASSUME_ROLE_WEB_IDENTITY_REGION",
+      "environment.AWS_ASSUME_ROLE_WEB_IDENTITY_ROLE_ARN",
+    ]
 
 # Runtime configuration
 runtime:
